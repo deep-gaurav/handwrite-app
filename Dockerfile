@@ -6,7 +6,7 @@ RUN apt update
 RUN apt install -y python-tk git
 RUN apt install -y curl build-essential aria2 unrar unzip tree zip wget wget
 
-RUN cd / && git clone https://89b81c9198c7975942f82cf05ecc040ded55051f@deeP@github.com/deep-gaurav/handwriter.git
+RUN cd / && git clone https://89b81c9198c7975942f82cf05ecc040ded55051f@github.com/deep-gaurav/handwriter.git
 
 RUN cd /handwriter && pip install -r requirements.txt
 
