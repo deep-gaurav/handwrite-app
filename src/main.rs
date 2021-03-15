@@ -1,4 +1,4 @@
-use std::{convert::Infallible, time::Duration};
+use std::{convert::Infallible, os::linux::raw::stat, process::Stdio, time::Duration};
 
 use tokio::process::Command;
 
@@ -17,9 +17,12 @@ async fn main() {
 async fn writer(text:String) -> Result<impl warp::Reply, Infallible> {
     let mut child = Command::new("python")
         .arg("/handwriter/demo.py")
-        .arg("-i abcdef")
-        .arg("-o /abc.svg")
+        .arg(format!("-i {}",text))
+        .arg(format!("-o {}",text))
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
         .spawn()
         .expect("failed to spawn");
-    Ok(format!("Exited with code {:#?}", child))
+    let status = child.wait_with_output().await.map(|o|format!("{:#?}",o)).unwrap_or_default();
+    Ok(format!("Exited with code {:#?}", status))
 }
