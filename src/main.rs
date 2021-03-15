@@ -56,8 +56,8 @@ async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection
             .expect("failed to spawn");
             let out = child.wait_with_output().await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
 
-            let mut contents = out.stdout;
-            Ok(contents)
+
+            Ok(format!("{:#?}",out))
         }
         Err(err) => {
             Err(warp::reject::custom(ServerError::from(err)))
