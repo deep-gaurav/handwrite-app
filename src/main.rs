@@ -15,8 +15,13 @@ async fn main() {
     let runf = warp::path!("write"/ String).and_then(
         writer
     );
-
-    warp::serve(hello.or(runf).or(fs_s)).run(([0, 0, 0, 0], std::env::var("PORT").unwrap_or_default().parse().unwrap_or_else(|x|3030))).await;
+    let runf2 = warp::path!("write2"/ String).and_then(
+        writer2
+    );
+    let runf3 = warp::path!("write3"/ String).and_then(
+        writer3
+    );
+    warp::serve(hello.or(runf).or(runf2).or(runf3).or(fs_s)).run(([0, 0, 0, 0], std::env::var("PORT").unwrap_or_default().parse().unwrap_or_else(|x|3030))).await;
 }
 
 #[derive(Debug)]
@@ -32,6 +37,79 @@ impl<T> From<T> for ServerError
 
 fn from(e: T) -> Self { Self{ error:format!("{:#?}",e)} }
 }
+async fn writer3(text:String) -> Result<impl warp::Reply, warp::reject::Rejection> {
+    let filename = format!("/{}.svg",text);
+    let mut child = Command::new("python")
+        .arg("/handwriter/demo.py")
+        .arg("-i")
+        .arg(format!("{}",text))
+        .arg("-o")
+        .arg(format!("{}",filename))
+        .current_dir("/handwriter")
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn");
+    log::debug!("child created {:#?}", child);
+
+    let status = child.wait_with_output().await.map(|o|format!("{:#?}",o));
+
+    log::debug!("Output {:#?}",status);
+
+    match status {
+        Ok(status) => {
+            let mut file = File::open(filename).await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+            let mut contents = vec![];
+            file.read_to_end(&mut contents).await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+            Ok(contents)
+        }
+        Err(err) => {
+            Err(warp::reject::custom(ServerError::from(err)))
+        }
+    }
+}
+
+async fn writer2(text:String) -> Result<impl warp::Reply, warp::reject::Rejection> {
+    let filename = format!("/{}.svg",text);
+    let mut child = Command::new("python")
+        .arg("/handwriter/demo.py")
+        .arg("-i")
+        .arg(format!("{}",text))
+        .arg("-o")
+        .arg(format!("{}",filename))
+        .current_dir("/handwriter")
+        .stderr(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn");
+    log::debug!("child created {:#?}", child);
+
+    let status = child.wait_with_output().await.map(|o|format!("{:#?}",o));
+
+    log::debug!("Output {:#?}",status);
+
+    match status {
+        Ok(status) => {
+            let mut child = Command::new("cat")
+            .arg(filename)
+            .current_dir("/handwriter")
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn");
+
+            log::debug!("cat child {:#?}",child);
+            let out = child.wait_with_output().await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+            log::debug!("cat out {:#?}",out);
+
+            Ok(out.stdout)
+        }
+        Err(err) => {
+            Err(warp::reject::custom(ServerError::from(err)))
+        }
+    }
+}
+
 
 async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection> {
     let filename = format!("/{}.svg",text);
