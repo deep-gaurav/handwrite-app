@@ -37,8 +37,10 @@ async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection
     let filename = format!("/{}.svg",text);
     let mut child = Command::new("python")
         .arg("/handwriter/demo.py")
-        .arg(format!("-i {}",text))
-        .arg(format!("-o {}",filename))
+        .arg("-i")
+        .arg(format!("{}",text))
+        .arg("-o")
+        .arg(format!("{}",filename))
         .current_dir("/handwriter")
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
