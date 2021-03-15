@@ -19,6 +19,7 @@ async fn writer(text:String) -> Result<impl warp::Reply, Infallible> {
         .arg("/handwriter/demo.py")
         .arg(format!("-i {}",text))
         .arg(format!("-o {}",text))
+        .current_dir("/handwriter")
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
