@@ -47,9 +47,16 @@ async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection
 
     match status {
         Ok(status) => {
-            let mut file = File::open(&filename).await.map_err(|e|warp::reject::custom(ServerError{error:format!("{:#?}",e)}))?;
-            let mut contents = vec![];
-            file.read_to_end(&mut contents).await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+            let mut child = Command::new("cat")
+            .arg(filename)
+            .current_dir("/handwriter")
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn");
+            let out = child.wait_with_output().await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+
+            let mut contents = out.stdout;
             Ok(contents)
         }
         Err(err) => {
