@@ -33,10 +33,11 @@ fn from(e: T) -> Self { Self{ error:format!("{:#?}",e)} }
 }
 
 async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection> {
+    let filename = format!("/{}.svg",text);
     let mut child = Command::new("python")
         .arg("/handwriter/demo.py")
         .arg(format!("-i {}",text))
-        .arg(format!("-o /{}.svg",text))
+        .arg(format!("-o {}",filename))
         .current_dir("/handwriter")
         .stderr(Stdio::piped())
         .stdout(Stdio::piped())
@@ -46,7 +47,7 @@ async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection
 
     match status {
         Ok(status) => {
-            let mut file = File::open(&format!("{}.svg",text)).await.map_err(|e|warp::reject::custom(ServerError{error:format!("{:#?}",e)}))?;
+            let mut file = File::open(&filename).await.map_err(|e|warp::reject::custom(ServerError{error:format!("{:#?}",e)}))?;
             let mut contents = vec![];
             file.read_to_end(&mut contents).await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
             Ok(contents)
