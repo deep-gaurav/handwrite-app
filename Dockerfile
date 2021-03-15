@@ -12,6 +12,8 @@ RUN cd /handwriter && pip install -r requirements.txt
 
 RUN curl https://sh.rustup.rs -sSf --output rustinstaller
 RUN sh rustinstaller -y
-RUN export PATH="$PATH:$HOME/.cargo/bin" && cd /src && cargo build --release
+
 ADD . /src
+
+RUN export PATH="$PATH:$HOME/.cargo/bin" && cd /src && cargo build --release
 CMD cd /src && ./target/release/heroku_handwriter
