@@ -1,4 +1,4 @@
-use std::{convert::Infallible, error, os::linux::raw::stat, process::Stdio, time::Duration};
+use std::{convert::Infallible, error, process::Stdio, time::Duration};
 
 use tokio::process::Command;
 
@@ -9,6 +9,7 @@ use tokio::io::AsyncReadExt;
 
 #[tokio::main]
 async fn main() {
+    pretty_env_logger::init();
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
     let runf = warp::path!("write"/ String).and_then(
@@ -43,7 +44,11 @@ async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection
         .stdout(Stdio::piped())
         .spawn()
         .expect("failed to spawn");
+    log::debug!("child created {:#?}", child);
+
     let status = child.wait_with_output().await.map(|o|format!("{:#?}",o));
+
+    log::debug!("Output {:#?}",status);
 
     match status {
         Ok(status) => {
@@ -54,8 +59,10 @@ async fn writer(text:String) -> Result<impl warp::Reply, warp::reject::Rejection
             .stdout(Stdio::piped())
             .spawn()
             .expect("failed to spawn");
-            let out = child.wait_with_output().await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
 
+            log::debug!("cat child {:#?}",child);
+            let out = child.wait_with_output().await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+            log::debug!("cat out {:#?}",out);
 
             Ok(format!("{:#?}",out))
         }
