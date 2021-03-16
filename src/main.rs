@@ -1,16 +1,14 @@
-use std::{convert::Infallible, error, process::Stdio, time::Duration};
+use std::{error, process::Stdio};
 
-use tokio::process::{self, Command};
+use tokio::process::Command;
 
-use warp::{http::Response, reject::Reject, Filter, Rejection};
+use warp::{http::Response, reject::Reject, Filter};
 
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
 use serde::{Deserialize, Serialize};
 
-use std::io::Error;
-use std::process::Output;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -35,8 +33,14 @@ pub enum TaskStatus {
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum TaskCompleteTypes {
-    Success(String),
+    Success(SuccessResult),
     Failed(String),
+}
+
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct SuccessResult {
+    url: String,
+    svg: String,
 }
 
 #[tokio::main]
@@ -45,10 +49,14 @@ async fn main() {
     let context = Context::default();
     let c2 = context.clone();
     let with_context = warp::any().map(move || c2.clone());
-    let run = warp::path!("create")
+    let create_task = warp::path!("create")
+        .and(warp::body::json::<HandParameters>())
+        .and(with_context.clone())
+        .and_then(create);
+    let status_task = warp::path!("create")
         .and(warp::body::json::<HandParameters>())
         .and(with_context)
-        .and_then(create);
+        .and_then(status);
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
 
@@ -89,10 +97,10 @@ async fn main() {
                     Ok(child) => {
                         log::debug!("child created {:#?}", child);
                         let output = child.wait_with_output().await;
-                        log::info!("Child completed {:#?}",output);
+                        log::info!("Child completed {:#?}", output);
                         match output {
                             Ok(output) => {
-                                let mut file = File::open(filename)
+                                let file = File::open(filename)
                                     .await
                                     .map_err(|e| warp::reject::custom(ServerError::from(e)));
                                 if let Ok(mut file) = file {
@@ -113,7 +121,10 @@ async fn main() {
                                                     if let Some(task) = task {
                                                         task.status = TaskStatus::Completed(
                                                             TaskCompleteTypes::Success(
-                                                                svg.to_string(),
+                                                                SuccessResult{
+                                                                    url:format!("https://handwrite.herokuapp.com/files/{}.svg",task.id),
+                                                                    svg:svg.to_string(),
+                                                                }
                                                             ),
                                                         );
                                                     }
@@ -185,12 +196,12 @@ async fn main() {
             }
         }
     };
-    let warpav = warp::serve(hello.or(run).or(fs_s)).run((
+    let warpav = warp::serve(hello.or(create_task).or(status_task).or(fs_s)).run((
         [0, 0, 0, 0],
         std::env::var("PORT")
             .unwrap_or_default()
             .parse()
-            .unwrap_or_else(|x| 3030),
+            .unwrap_or_else(|_x| 3030),
     ));
     tokio::join!(solver, warpav);
 }
@@ -198,9 +209,30 @@ async fn main() {
 async fn load_file(filename: &str) -> Option<String> {
     let mut file = File::open(filename).await.ok()?;
     let mut contents = vec![];
-    let f = file.read_to_end(&mut contents).await.ok()?;
+    let _f = file.read_to_end(&mut contents).await.ok()?;
     let st = std::str::from_utf8(&contents).ok()?.to_string();
     Some(st)
+}
+
+async fn status(
+    params: HandParameters,
+    context: Context,
+) -> Result<impl warp::Reply, warp::reject::Rejection> {
+    let id = format!("{:x}", md5::compute(format!("{:#?}", params).as_bytes()));
+    let con = context.read().await;
+    let task = con.iter().find(|t| t.id == id);
+    if let Some(task) = task {
+        let body =
+            serde_json::to_string(task).map_err(|e| warp::reject::custom(ServerError::from(e)))?;
+
+        let reply = Response::builder()
+            .header("Content-Type", "application/json")
+            .body(body)
+            .map_err(|e| warp::reject::custom(ServerError::from(e)))?;
+        Ok(reply)
+    } else {
+        Err(warp::reject::not_found())
+    }
 }
 
 async fn create(
@@ -211,13 +243,16 @@ async fn create(
     let filename = format!("/{}.svg", id);
     if let Some(svg) = load_file(&filename).await {
         let task = Task {
-            id: id,
+            id: id.clone(),
             text: params.text,
             style: params.style,
             bias: params.bias,
             color: params.color,
             width: params.width,
-            status: TaskStatus::Completed(TaskCompleteTypes::Success(svg)),
+            status: TaskStatus::Completed(TaskCompleteTypes::Success(SuccessResult {
+                url: format!("https://handwrite.herokuapp.com/files/{}.svg", id),
+                svg: svg.to_string(),
+            })),
         };
         let body =
             serde_json::to_string(&task).map_err(|e| warp::reject::custom(ServerError::from(e)))?;
