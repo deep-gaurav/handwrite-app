@@ -27,8 +27,20 @@ pub struct Task {
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum TaskStatus {
-    Waiting,
+    Waiting(u32),
     Completed(TaskCompleteTypes),
+}
+
+impl TaskStatus {
+    /// Returns `true` if the task_status is [`Waiting`].
+    pub fn is_waiting(&self) -> bool {
+        matches!(self, Self::Waiting(..))
+    }
+
+    /// Returns `true` if the task_status is [`Completed`].
+    pub fn is_completed(&self) -> bool {
+        matches!(self, Self::Completed(..))
+    }
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +55,23 @@ pub struct SuccessResult {
     svg: String,
 }
 
+async fn complete_task(context: Context, id: &str, status: TaskStatus) {
+    let mut c = context.write().await;
+
+    let task = c.iter_mut().find(|t| t.id == id);
+    if let Some(task) = task {
+        task.status = status;
+        c.iter_mut()
+            .filter(|t| t.status.is_waiting())
+            .enumerate()
+            .for_each(|(i, f)| {
+                if let TaskStatus::Waiting(p) = &mut f.status {
+                    *p = (i + 1) as u32;
+                }
+            });
+    }
+}
+
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
@@ -53,7 +82,7 @@ async fn main() {
         .and(warp::body::json::<HandParameters>())
         .and(with_context.clone())
         .and_then(create);
-    let status_task = warp::path!("status"/String)
+    let status_task = warp::path!("status" / String)
         .and(with_context)
         .and_then(status);
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
@@ -64,7 +93,7 @@ async fn main() {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             let task: Option<Task> = {
                 let c = context.write().await;
-                let task_to_do = c.iter().find(|t| t.status == TaskStatus::Waiting);
+                let task_to_do = c.iter().find(|t| t.status.is_waiting());
                 if let Some(task) = task_to_do {
                     Some(task.clone())
                 } else {
@@ -113,83 +142,76 @@ async fn main() {
                                             let svg = std::str::from_utf8(&contents);
                                             match svg {
                                                 Ok(svg) => {
-                                                    let mut c = context.write().await;
-
-                                                    let task =
-                                                        c.iter_mut().find(|t| t.id == taskc.id);
-                                                    if let Some(task) = task {
-                                                        task.status = TaskStatus::Completed(
-                                                            TaskCompleteTypes::Success(
-                                                                SuccessResult{
-                                                                    url:format!("https://handwrite.herokuapp.com/files/{}.svg",task.id),
-                                                                    svg:svg.to_string(),
-                                                                }
-                                                            ),
-                                                        );
-                                                    }
+                                                    complete_task( context.clone(), &taskc.id, TaskStatus::Completed(
+                                                        TaskCompleteTypes::Success(
+                                                            SuccessResult{
+                                                                url:format!("https://handwrite.herokuapp.com/files/{}.svg",task.id),
+                                                                svg:svg.to_string(),
+                                                            }
+                                                        ),
+                                                    )).await;
                                                 }
                                                 Err(err) => {
-                                                    let mut c = context.write().await;
-
-                                                    let task =
-                                                        c.iter_mut().find(|t| t.id == taskc.id);
-                                                    if let Some(task) = task {
-                                                        task.status = TaskStatus::Completed(
+                                                    complete_task(
+                                                        context.clone(),
+                                                        &taskc.id,
+                                                        TaskStatus::Completed(
                                                             TaskCompleteTypes::Failed(format!(
                                                                 "{:#?} {:#?}",
                                                                 output, err
                                                             )),
-                                                        );
-                                                    }
+                                                        ),
+                                                    )
+                                                    .await;
                                                 }
                                             }
                                         }
                                         Err(err) => {
-                                            let mut c = context.write().await;
-
-                                            let task = c.iter_mut().find(|t| t.id == taskc.id);
-                                            if let Some(task) = task {
-                                                task.status = TaskStatus::Completed(
-                                                    TaskCompleteTypes::Failed(format!(
-                                                        "{:#?} {:#?}",
-                                                        output, err
-                                                    )),
-                                                );
-                                            }
+                                            complete_task(
+                                                context.clone(),
+                                                &taskc.id,
+                                                TaskStatus::Completed(TaskCompleteTypes::Failed(
+                                                    format!("{:#?} {:#?}", output, err),
+                                                )),
+                                            )
+                                            .await;
                                         }
                                     }
                                 } else {
-                                    let mut c = context.write().await;
-
-                                    let task = c.iter_mut().find(|t| t.id == taskc.id);
-                                    if let Some(task) = task {
-                                        task.status = TaskStatus::Completed(
-                                            TaskCompleteTypes::Failed(format!("{:#?}", output)),
-                                        );
-                                    }
+                                    complete_task(
+                                        context.clone(),
+                                        &taskc.id,
+                                        TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
+                                            " {:#?}",
+                                            output
+                                        ))),
+                                    )
+                                    .await;
                                 }
                             }
                             Err(err) => {
-                                let mut c = context.write().await;
-
-                                let task = c.iter_mut().find(|t| t.id == taskc.id);
-                                if let Some(task) = task {
-                                    task.status = TaskStatus::Completed(TaskCompleteTypes::Failed(
-                                        format!("{:#?}", err),
-                                    ));
-                                }
+                                complete_task(
+                                    context.clone(),
+                                    &taskc.id,
+                                    TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
+                                        " {:#?}",
+                                        err
+                                    ))),
+                                )
+                                .await;
                             }
                         }
                     }
                     Err(err) => {
-                        let mut c = context.write().await;
-
-                        let task = c.iter_mut().find(|t| t.id == taskc.id);
-                        if let Some(task) = task {
-                            task.status = TaskStatus::Completed(TaskCompleteTypes::Failed(
-                                format!("child spawn failed {:#?}", err),
-                            ));
-                        }
+                        complete_task(
+                            context.clone(),
+                            &taskc.id,
+                            TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
+                                "child spawn failed {:#?}",
+                                err
+                            ))),
+                        )
+                        .await;
                     }
                 }
             }
@@ -213,10 +235,7 @@ async fn load_file(filename: &str) -> Option<String> {
     Some(st)
 }
 
-async fn status(
-    id:String,
-    context: Context,
-) -> Result<impl warp::Reply, warp::reject::Rejection> {
+async fn status(id: String, context: Context) -> Result<impl warp::Reply, warp::reject::Rejection> {
     let con = context.read().await;
     let task = con.iter().find(|t| t.id == id);
     if let Some(task) = task {
@@ -273,6 +292,8 @@ async fn create(
                 .map_err(|e| warp::reject::custom(ServerError::from(e)))?;
             Ok(reply)
         } else {
+            let openq = con.iter().filter(|t| t.status.is_waiting()).count();
+
             drop(con);
             let task = Task {
                 id: id,
@@ -281,7 +302,7 @@ async fn create(
                 bias: params.bias,
                 color: params.color,
                 width: params.width,
-                status: TaskStatus::Waiting,
+                status: TaskStatus::Waiting((openq + 1) as u32),
             };
             context.write().await.push(task.clone());
             let body = serde_json::to_string(&task)
