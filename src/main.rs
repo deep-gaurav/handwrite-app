@@ -48,7 +48,7 @@ impl<T> From<T> for ServerError
 fn from(e: T) -> Self { Self{ error:format!("{:#?}",e)} }
 }
 async fn writer3(text:String,param:HandParameters) -> Result<impl warp::Reply, warp::reject::Rejection> {
-    let filename = format!("/{}.svg",text);
+    let filename = format!(r#""/{}.svg""#,text);
     let mut child = Command::new("python")
         .arg("/handwriter/demo.py")
         .arg("-i")
