@@ -53,8 +53,7 @@ async fn main() {
         .and(warp::body::json::<HandParameters>())
         .and(with_context.clone())
         .and_then(create);
-    let status_task = warp::path!("create")
-        .and(warp::body::json::<HandParameters>())
+    let status_task = warp::path!("status"/String)
         .and(with_context)
         .and_then(status);
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
@@ -215,10 +214,9 @@ async fn load_file(filename: &str) -> Option<String> {
 }
 
 async fn status(
-    params: HandParameters,
+    id:String,
     context: Context,
 ) -> Result<impl warp::Reply, warp::reject::Rejection> {
-    let id = format!("{:x}", md5::compute(format!("{:#?}", params).as_bytes()));
     let con = context.read().await;
     let task = con.iter().find(|t| t.id == id);
     if let Some(task) = task {
