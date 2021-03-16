@@ -2,7 +2,7 @@ use std::{convert::Infallible, error, process::Stdio, time::Duration};
 
 use tokio::process::Command;
 
-use warp::{Filter, reject::Reject};
+use warp::{Filter, reject::Reject,http::Response};
 
 use tokio::fs::File;
 use tokio::io::AsyncReadExt; 
@@ -61,7 +61,9 @@ async fn writer3(text:String) -> Result<impl warp::Reply, warp::reject::Rejectio
             let mut file = File::open(filename).await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
             let mut contents = vec![];
             file.read_to_end(&mut contents).await.map_err(|e|warp::reject::custom(ServerError::from(e)))?;
-            Ok(contents)
+            let body = std::str::from_utf8(&contents).map_err(|e|warp::reject::custom(ServerError::from(e)))?.to_string();
+            let reply = Response::builder().header("Content-Type", "image/svg+xml").body(body).map_err(|e|warp::reject::custom(ServerError::from(e)))?;
+            Ok(reply)
         }
         Err(err) => {
             Err(warp::reject::custom(ServerError::from(err)))
