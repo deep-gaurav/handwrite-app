@@ -293,6 +293,7 @@ dependencies = [
  "md5",
  "pretty_env_logger",
  "serde",
+ "serde_json",
  "tokio",
  "warp",
 ]
