@@ -89,6 +89,7 @@ async fn main() {
                     Ok(child) => {
                         log::debug!("child created {:#?}", child);
                         let output = child.wait_with_output().await;
+                        log::info!("Child completed {:#?}",output);
                         match output {
                             Ok(output) => {
                                 let mut file = File::open(filename)
@@ -176,7 +177,7 @@ async fn main() {
                         let task = c.iter_mut().find(|t| t.id == taskc.id);
                         if let Some(task) = task {
                             task.status = TaskStatus::Completed(TaskCompleteTypes::Failed(
-                                format!("{:#?}", err),
+                                format!("child spawn failed {:#?}", err),
                             ));
                         }
                     }
