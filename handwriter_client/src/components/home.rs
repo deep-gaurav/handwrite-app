@@ -7,7 +7,7 @@ pub struct Home{
     style_ref:NodeRef,
     bias_ref:NodeRef,
     text_ref:NodeRef,
-    id:Option<String>,
+    id:Option<Task>,
     is_loading:bool,
     link:ComponentLink<Self>,
 }
@@ -84,7 +84,7 @@ impl Component for Home {
                 true
             }
             Msg::GeneratedTask(task)=>{
-                self.id=Some(task.id);
+                self.id=Some(task);
                 self.is_loading=false;
                 true
             }
@@ -102,7 +102,6 @@ impl Component for Home {
     fn view(&self) -> Html {
         html!{
             <div class="section">
-
                 <fieldset disabled=self.is_loading>
                 <div class="field">
                     <div class="control">

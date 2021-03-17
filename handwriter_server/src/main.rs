@@ -7,10 +7,9 @@ use warp::{http::Response, reject::Reject, Filter};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
+use handwriter_shared::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use handwriter_shared::*;
-
 
 pub type Context = Arc<RwLock<Vec<Task>>>;
 
@@ -47,7 +46,18 @@ async fn main() {
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
 
-    let cors = warp::cors().allow_any_origin();
+    let cors = warp::cors()
+        .allow_any_origin()
+        .allow_headers(vec![
+            "User-Agent",
+            "Sec-Fetch-Mode",
+            "Referer",
+            "Origin",
+            "Access-Control-Request-Method",
+            "Access-Control-Request-Headers",
+            "Content-Type",
+        ])
+        .allow_methods(vec!["POST", "GET"]);
 
     let solver = async {
         loop {
@@ -178,7 +188,7 @@ async fn main() {
             }
         }
     };
-    let route = hello.or(create_task).or(status_task).or(fs_s).with(cors);
+    let route = (hello.or(create_task).or(status_task).or(fs_s)).with(cors);
     let warpav = warp::serve(route).run((
         [0, 0, 0, 0],
         std::env::var("PORT")
@@ -278,8 +288,6 @@ async fn create(
         }
     }
 }
-
-
 
 #[derive(Debug)]
 struct ServerError {
