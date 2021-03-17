@@ -101,7 +101,7 @@ impl Component for WrImage {
                             <p>{"Loading"}</p>
                         </div>
                         <div class="message-body">
-                            {format!("Image Loading. Position : {}",position)}
+                            {format!("Image Loading. Queue Position : {}",position)}
                         </div>
                     </article>
                 }
