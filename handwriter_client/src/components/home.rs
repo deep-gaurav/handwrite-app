@@ -3,11 +3,13 @@ use yew::prelude::*;
 use yewtil::future::LinkFuture;
 use web_sys::{HtmlInputElement,HtmlTextAreaElement};
 
+use crate::components::wrimage::WrImage;
+
 pub struct Home{
     style_ref:NodeRef,
     bias_ref:NodeRef,
     text_ref:NodeRef,
-    id:Option<Task>,
+    task:Option<Task>,
     is_loading:bool,
     link:ComponentLink<Self>,
 }
@@ -33,7 +35,7 @@ impl Component for Home {
             style_ref:NodeRef::default(),
             bias_ref:NodeRef::default(),
             text_ref:NodeRef::default(),
-            id:None,
+            task:None,
             is_loading:false,
             link
         }
@@ -49,7 +51,7 @@ impl Component for Home {
                 self.link.send_future(
                     async move {
                         let client = reqwest::Client::new();
-                        let resp =client.post("https://handwrite.herokuapp.com")
+                        let resp =client.post("https://handwrite.herokuapp.com/create")
                             .json(
                                 &HandParameters{
                                     text: text,
@@ -84,7 +86,7 @@ impl Component for Home {
                 true
             }
             Msg::GeneratedTask(task)=>{
-                self.id=Some(task);
+                self.task=Some(task);
                 self.is_loading=false;
                 true
             }
@@ -125,7 +127,7 @@ impl Component for Home {
                 <div class="control" onclick=self.link.callback(|_|Msg::Generate)>
                     <a class=format!("button is-info {}",{
                         if self.is_loading{
-                            "is_loading"
+                            "is-loading"
                         }else{
                             ""
                         }
@@ -134,6 +136,18 @@ impl Component for Home {
                     </a>
                 </div>
                 </fieldset>
+
+                {
+                    if let Some(task) = &self.task{
+                        html!{
+                            <WrImage task=task.clone() />
+                        }
+                    }else{
+                        html!{
+
+                        }
+                    }
+                }
             </div>
         }
     }

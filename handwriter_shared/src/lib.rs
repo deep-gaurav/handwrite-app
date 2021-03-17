@@ -1,6 +1,6 @@
 use serde::{Serialize,Deserialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize,PartialEq)]
 pub struct Task {
     pub id: String,
     pub text: String,
