@@ -46,8 +46,10 @@ impl Component for Home {
             Msg::Generate => {
                 let style = self.style_ref.cast::<HtmlInputElement>().map(|e|e.value()).unwrap_or_default().parse::<u32>().ok();
                 let bias = self.bias_ref.cast::<HtmlInputElement>().map(|e|e.value()).unwrap_or_default().parse::<f32>().ok();
-                let text = self.text_ref.cast::<HtmlTextAreaElement>().map(|e|e.value()).unwrap_or("The quick brown fox jumps over a lazy dog.".to_string());
-                
+                let mut text = self.text_ref.cast::<HtmlTextAreaElement>().map(|e|e.value()).unwrap_or("The quick brown fox jumps over a lazy dog.".to_string());
+                if text.is_empty() {
+                    text = "The quick brown fox jumps over a lazy dog.".to_string();
+                }
                 self.link.send_future(
                     async move {
                         let client = reqwest::Client::new();
@@ -113,12 +115,12 @@ impl Component for Home {
                 <div class="field is-horizontal">
                     <div class="field-body">
                         <div class="field">
-                        <p class="control is-expanded has-icons-left">
+                        <p class="control is-expanded ">
                             <input ref=self.style_ref.clone() class="input" type="number" placeholder="Style (0,1,2.. 9)"/>
                         </p>
                         </div>
                         <div class="field">
-                        <p class="control is-expanded has-icons-left has-icons-right">
+                        <p class="control is-expanded ">
                             <input ref=self.bias_ref.clone() class="input is-success" type="number" min=0 max=1 step=0.01 placeholder="Bias (0 - 1)" />
                         </p>
                         </div>
