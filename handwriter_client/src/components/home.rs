@@ -46,7 +46,7 @@ impl Component for Home {
             Msg::Generate => {
                 let style = self.style_ref.cast::<HtmlInputElement>().map(|e|e.value()).unwrap_or_default().parse::<u32>().ok();
                 let bias = self.bias_ref.cast::<HtmlInputElement>().map(|e|e.value()).unwrap_or_default().parse::<f32>().ok();
-                let text = self.text_ref.cast::<HtmlTextAreaElement>().map(|e|e.value()).unwrap_or_default();
+                let text = self.text_ref.cast::<HtmlTextAreaElement>().map(|e|e.value()).unwrap_or("The quick brown fox jumps over a lazy dog.".to_string());
                 
                 self.link.send_future(
                     async move {
@@ -114,12 +114,12 @@ impl Component for Home {
                     <div class="field-body">
                         <div class="field">
                         <p class="control is-expanded has-icons-left">
-                            <input ref=self.style_ref.clone() class="input" type="number" placeholder="Style"/>
+                            <input ref=self.style_ref.clone() class="input" type="number" placeholder="Style (0,1,2.. 9)"/>
                         </p>
                         </div>
                         <div class="field">
                         <p class="control is-expanded has-icons-left has-icons-right">
-                            <input ref=self.bias_ref.clone() class="input is-success" type="number" min=0 max=1 step=0.01 placeholder="Bias" />
+                            <input ref=self.bias_ref.clone() class="input is-success" type="number" min=0 max=1 step=0.01 placeholder="Bias (0 - 1)" />
                         </p>
                         </div>
                     </div>
