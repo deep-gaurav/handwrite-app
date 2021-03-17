@@ -121,7 +121,7 @@ impl Component for Home {
                         </div>
                         <div class="field">
                         <p class="control is-expanded ">
-                            <input ref=self.bias_ref.clone() class="input is-success" type="number" min=0 max=1 step=0.01 placeholder="Bias (0 - 1)" />
+                            <input ref=self.bias_ref.clone() class="input" type="number" min=0 max=1 step=0.01 placeholder="Bias (0 - 1)" />
                         </p>
                         </div>
                     </div>
@@ -142,7 +142,9 @@ impl Component for Home {
                 {
                     if let Some(task) = &self.task{
                         html!{
-                            <WrImage task=task.clone() />
+                            <div class="box mt-2">
+                                <WrImage task=task.clone() />
+                            </div>
                         }
                     }else{
                         html!{

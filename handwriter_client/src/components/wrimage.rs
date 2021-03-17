@@ -96,27 +96,42 @@ impl Component for WrImage {
         match &self.task.status {
             handwriter_shared::TaskStatus::Waiting(position) => {
                 html!{
-                    <div>
-                        {
-                            format!("image waiting, queue position {}",position)
-                        }
-                    </div>
+                    <article class="message is-info">
+                        <div class="message-header">
+                            <p>{"Loading"}</p>
+                        </div>
+                        <div class="message-body">
+                            {format!("Image Loading. Position : {}",position)}
+                        </div>
+                    </article>
                 }
             }
             handwriter_shared::TaskStatus::Completed(status) => {
                 match status {
                     handwriter_shared::TaskCompleteTypes::Success(result) => {
                         html!{
-                            <RawHtml inner_html=result.svg.clone() />
+
+                            <article class="message is-success">
+                                <div class="message-header">
+                                    <p>{"Success"}</p>
+                                </div>
+                                <div class="message-body">
+                                    <RawHtml inner_html=result.svg.clone() />
+                                </div>
+                            </article>
                         }
                     }
                     handwriter_shared::TaskCompleteTypes::Failed(err) => {
                         html!{
-                            <div>
-                                {
-                                    format!("image load failed {}",err)
-                                }
-                            </div>
+
+                            <article class="message is-danger">
+                                <div class="message-header">
+                                    <p>{"Failed"}</p>
+                                </div>
+                                <div class="message-body">
+                                    {err}
+                                </div>
+                            </article>
                         }
                     }
                 }
