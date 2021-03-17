@@ -1,0 +1,29 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <title>Handwrite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/bulmaswatch.min-c47f34bfeccfb45c.css">
+    <script>
+        history.pushState = (f => function pushState() {
+            var ret = f.apply(this, arguments);
+            window.dispatchEvent(new Event('pushstate'));
+            window.dispatchEvent(new Event('locationchange'));
+            return ret;
+        })(history.pushState);
+
+        history.replaceState = (f => function replaceState() {
+            var ret = f.apply(this, arguments);
+            window.dispatchEvent(new Event('replacestate'));
+            window.dispatchEvent(new Event('locationchange'));
+            return ret;
+        })(history.replaceState);
+
+        window.addEventListener('popstate', () => {
+            window.dispatchEvent(new Event('locationchange'))
+        });
+    </script>
+<script type="module">import init from '/index-3c85ae96d023b4e9.js';init('/index-3c85ae96d023b4e9_bg.wasm');</script></head>
+<body>
+
+
+</body></html>

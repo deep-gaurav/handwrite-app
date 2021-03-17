@@ -7,16 +7,12 @@ use warp::{http::Response, reject::Reject, Filter};
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-use serde::{Deserialize, Serialize};
-
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use handwriter_shared::*;
 
 
 pub type Context = Arc<RwLock<Vec<Task>>>;
-
-
 
 async fn complete_task(context: Context, id: &str, status: TaskStatus) {
     let mut c = context.write().await;
@@ -50,6 +46,8 @@ async fn main() {
         .and_then(status);
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
+
+    let cors = warp::cors().allow_any_origin();
 
     let solver = async {
         loop {
@@ -180,7 +178,8 @@ async fn main() {
             }
         }
     };
-    let warpav = warp::serve(hello.or(create_task).or(status_task).or(fs_s)).run((
+    let route = hello.or(create_task).or(status_task).or(fs_s).with(cors);
+    let warpav = warp::serve(route).run((
         [0, 0, 0, 0],
         std::env::var("PORT")
             .unwrap_or_default()
