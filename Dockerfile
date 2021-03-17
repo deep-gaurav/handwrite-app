@@ -16,4 +16,4 @@ RUN sh rustinstaller -y
 ADD . /src
 
 RUN export PATH="$PATH:$HOME/.cargo/bin" && cd /src && cargo build --release
-CMD cd /src && RUST_LOG=debug ./target/release/heroku_handwriter
+CMD cd /src && RUST_LOG=debug ./target/release/handwriter_server

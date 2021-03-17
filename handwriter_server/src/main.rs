@@ -11,49 +11,12 @@ use serde::{Deserialize, Serialize};
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use handwriter_shared::*;
+
 
 pub type Context = Arc<RwLock<Vec<Task>>>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Task {
-    pub id: String,
-    pub text: String,
-    pub style: Option<u32>,
-    pub bias: Option<f32>,
-    pub color: Option<String>,
-    pub width: Option<u32>,
-    pub status: TaskStatus,
-}
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub enum TaskStatus {
-    Waiting(u32),
-    Completed(TaskCompleteTypes),
-}
-
-impl TaskStatus {
-    /// Returns `true` if the task_status is [`Waiting`].
-    pub fn is_waiting(&self) -> bool {
-        matches!(self, Self::Waiting(..))
-    }
-
-    /// Returns `true` if the task_status is [`Completed`].
-    pub fn is_completed(&self) -> bool {
-        matches!(self, Self::Completed(..))
-    }
-}
-
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub enum TaskCompleteTypes {
-    Success(SuccessResult),
-    Failed(String),
-}
-
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-pub struct SuccessResult {
-    url: String,
-    svg: String,
-}
 
 async fn complete_task(context: Context, id: &str, status: TaskStatus) {
     let mut c = context.write().await;
@@ -317,14 +280,7 @@ async fn create(
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct HandParameters {
-    text: String,
-    style: Option<u32>,
-    bias: Option<f32>,
-    color: Option<String>,
-    width: Option<u32>,
-}
+
 
 #[derive(Debug)]
 struct ServerError {
