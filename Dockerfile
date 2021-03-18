@@ -4,7 +4,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt update
 RUN apt install -y python-tk git
-RUN apt install -y curl build-essential aria2 unrar unzip tree zip wget wget
+RUN apt install -y curl build-essential aria2 unrar unzip tree zip wget wget libcairo2-dev pkg-config
 
 RUN cd / && git clone https://89b81c9198c7975942f82cf05ecc040ded55051f@github.com/deep-gaurav/handwriter.git
 
