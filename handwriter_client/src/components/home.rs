@@ -142,7 +142,7 @@ impl Component for Home {
                 {
                     if let Some(task) = &self.task{
                         html!{
-                            <div class="box mt-2">
+                            <div key=task.id.clone() class="box mt-2">
                                 <WrImage key=task.id.clone() task=task.clone() />
                             </div>
                         }
