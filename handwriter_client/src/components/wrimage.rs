@@ -27,7 +27,7 @@ impl Component for WrImage {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let interval_task = IntervalService::spawn(std::time::Duration::from_millis(1000), 
+        let interval_task = IntervalService::spawn(std::time::Duration::from_millis(3000), 
             link.callback(|_|Msg::Tick)
         );
         Self{
