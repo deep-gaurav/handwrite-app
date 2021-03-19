@@ -127,14 +127,16 @@ impl Component for Home {
                         </div>
                     </div>
                 </div>
-                <div class="control" onclick=self.link.callback(|_|Msg::Generate)>
+                <div class="control">
                     <a class=format!("button is-info {}",{
                         if self.is_loading{
                             "is-loading"
                         }else{
                             ""
                         }
-                    })>
+                    })
+                    onclick=self.link.callback(|_|Msg::Generate)
+                    >
                     {"Generate"}
                     </a>
                 </div>
