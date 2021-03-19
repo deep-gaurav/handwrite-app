@@ -12,5 +12,5 @@ export PATH="$PATH:$PWD"
 cargo install wasm-bindgen-cli
 
 rustup target add wasm32-unknown-unknown
-
+cargo update
 trunk build --release
