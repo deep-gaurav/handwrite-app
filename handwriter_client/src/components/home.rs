@@ -50,6 +50,7 @@ impl Component for Home {
                 if text.is_empty() {
                     text = "The quick brown fox jumps over a lazy dog.".to_string();
                 }
+                self.task=None;
                 self.link.send_future(
                     async move {
                         let client = reqwest::Client::new();
