@@ -59,9 +59,12 @@ async fn main() {
         ])
         .allow_methods(vec!["POST", "GET"]);
 
-        let hgen = handwriter::HandWritingGen::new();
-
     let solver = async {
+        let hgen = tokio::task::spawn(async {
+            let hgen = handwriter::HandWritingGen::new();
+            hgen
+        })
+        .await;
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             let task: Option<Task> = {
@@ -76,12 +79,20 @@ async fn main() {
             if let Some(task) = task {
                 let taskc = task.clone();
                 let filename = format!("/{}.svg", task.id);
-                match &hgen{
+                match &hgen {
                     Ok(hgen) => {
-                        let svg =hgen.gen_svg(&task.text, task.style.unwrap_or(0), task.bias.unwrap_or(0.75), &task.color.unwrap_or("blue".to_string()), task.width.unwrap_or(1) as f32);
-                        match svg{
-                            Ok(svg) => {
-                                complete_task( context.clone(), &taskc.id, TaskStatus::Completed(
+                        match hgen {
+                            Ok(hgen) => {
+                                let svg = hgen.gen_svg(
+                                    &task.text,
+                                    task.style.unwrap_or(0),
+                                    task.bias.unwrap_or(0.75),
+                                    &task.color.unwrap_or("blue".to_string()),
+                                    task.width.unwrap_or(1) as f32,
+                                );
+                                match svg {
+                                    Ok(svg) => {
+                                        complete_task( context.clone(), &taskc.id, TaskStatus::Completed(
                                     TaskCompleteTypes::Success(
                                         SuccessResult{
                                             url:format!("https://handwrite.herokuapp.com/image/{}.svg",task.id),
@@ -89,6 +100,18 @@ async fn main() {
                                         }
                                     ),
                                 )).await;
+                                    }
+                                    Err(err) => {
+                                        complete_task(
+                                            context.clone(),
+                                            &taskc.id,
+                                            TaskStatus::Completed(TaskCompleteTypes::Failed(
+                                                format!("child spawn failed {:#?}", err),
+                                            )),
+                                        )
+                                        .await;
+                                    }
+                                }
                             }
                             Err(err) => {
                                 complete_task(
