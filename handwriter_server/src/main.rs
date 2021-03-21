@@ -59,6 +59,8 @@ async fn main() {
         ])
         .allow_methods(vec!["POST", "GET"]);
 
+        let hgen = handwriter::HandWritingGen::new();
+
     let solver = async {
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -74,7 +76,6 @@ async fn main() {
             if let Some(task) = task {
                 let taskc = task.clone();
                 let filename = format!("/{}.svg", task.id);
-                let hgen = handwriter::HandWritingGen::new();
                 match hgen{
                     Ok(hgen) => {
                         let svg =hgen.gen_svg(&task.text, task.style.unwrap_or(0), task.bias.unwrap_or(0.75), &task.color.unwrap_or("blue".to_string()), task.width.unwrap_or(1) as f32);
