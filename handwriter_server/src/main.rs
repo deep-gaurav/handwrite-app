@@ -61,7 +61,7 @@ async fn main() {
 
     let solver = async {
         let hgen = tokio::task::spawn(async {
-            let hgen = handwriter::HandWritingGen::new();
+            let hgen = handwriter::HandWritingGen::new(false,true);
             hgen
         })
         .await;
