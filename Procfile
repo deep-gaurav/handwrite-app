@@ -1,0 +1,1 @@
+web: target/release/handwriter_server

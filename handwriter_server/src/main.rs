@@ -74,98 +74,27 @@ async fn main() {
             if let Some(task) = task {
                 let taskc = task.clone();
                 let filename = format!("/{}.svg", task.id);
-                let child = Command::new("python")
-                    .arg("/handwriter/demo.py")
-                    .arg("-i")
-                    .arg(format!("{}", task.text))
-                    .arg("-o")
-                    .arg(format!("{}", filename))
-                    .arg("-s")
-                    .arg(task.style.unwrap_or(0).to_string())
-                    .arg("-b")
-                    .arg(task.bias.unwrap_or(0.75).to_string())
-                    .arg("-c")
-                    .arg(task.color.unwrap_or("blue".to_string()))
-                    .arg("-w")
-                    .arg(task.width.unwrap_or(1).to_string())
-                    .current_dir("/handwriter")
-                    .stderr(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn();
-                match child {
-                    Ok(child) => {
-                        log::debug!("child created {:#?}", child);
-                        let output = child.wait_with_output().await;
-                        log::info!("Child completed {:#?}", output);
-                        match output {
-                            Ok(output) => {
-                                let file = File::open(filename)
-                                    .await
-                                    .map_err(|e| warp::reject::custom(ServerError::from(e)));
-                                if let Ok(mut file) = file {
-                                    let mut contents = vec![];
-                                    let f = file
-                                        .read_to_end(&mut contents)
-                                        .await
-                                        .map_err(|e| warp::reject::custom(ServerError::from(e)));
-                                    match f {
-                                        Ok(_) => {
-                                            let svg = std::str::from_utf8(&contents);
-                                            match svg {
-                                                Ok(svg) => {
-                                                    complete_task( context.clone(), &taskc.id, TaskStatus::Completed(
-                                                        TaskCompleteTypes::Success(
-                                                            SuccessResult{
-                                                                url:format!("https://handwrite.herokuapp.com/files/{}.svg",task.id),
-                                                                svg:svg.to_string(),
-                                                            }
-                                                        ),
-                                                    )).await;
-                                                }
-                                                Err(err) => {
-                                                    complete_task(
-                                                        context.clone(),
-                                                        &taskc.id,
-                                                        TaskStatus::Completed(
-                                                            TaskCompleteTypes::Failed(format!(
-                                                                "{:#?} {:#?}",
-                                                                output, err
-                                                            )),
-                                                        ),
-                                                    )
-                                                    .await;
-                                                }
-                                            }
+                let hgen = handwriter::HandWritingGen::new();
+                match hgen{
+                    Ok(hgen) => {
+                        let svg =hgen.gen_svg(&task.text, task.style, task.bias, task.color, task.width);
+                        match svg{
+                            Ok(svg) => {
+                                complete_task( context.clone(), &taskc.id, TaskStatus::Completed(
+                                    TaskCompleteTypes::Success(
+                                        SuccessResult{
+                                            url:format!("https://handwrite.herokuapp.com/image/{}.svg",task.id),
+                                            svg:svg,
                                         }
-                                        Err(err) => {
-                                            complete_task(
-                                                context.clone(),
-                                                &taskc.id,
-                                                TaskStatus::Completed(TaskCompleteTypes::Failed(
-                                                    format!("{:#?} {:#?}", output, err),
-                                                )),
-                                            )
-                                            .await;
-                                        }
-                                    }
-                                } else {
-                                    complete_task(
-                                        context.clone(),
-                                        &taskc.id,
-                                        TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
-                                            " {:#?}",
-                                            output
-                                        ))),
-                                    )
-                                    .await;
-                                }
+                                    ),
+                                )).await;
                             }
                             Err(err) => {
                                 complete_task(
                                     context.clone(),
                                     &taskc.id,
                                     TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
-                                        " {:#?}",
+                                        "child spawn failed {:#?}",
                                         err
                                     ))),
                                 )
