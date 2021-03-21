@@ -5,3 +5,4 @@ sklearn
 svgwrite
 matplotlib
 pandas
+pycairo
