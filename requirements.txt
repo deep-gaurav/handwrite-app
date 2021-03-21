@@ -1,8 +1,0 @@
-numpy
-tensorflow
-tensorflow_probability
-sklearn
-svgwrite
-matplotlib
-pandas
-pycairo
