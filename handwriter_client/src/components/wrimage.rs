@@ -49,7 +49,7 @@ impl Component for WrImage {
                     self.link.send_future(
                         
                         async move {
-                            let resp =reqwest::get(&format!("https://handwrite.herokuapp.com/status/{}",id))
+                            let resp =reqwest::get(&format!("{}/status/{}",option_env!("SERVER_URL").unwrap_or("https://handwrite.herokuapp.com"), id))
                             .await;
                             match resp {
                                 Ok(resp) => {

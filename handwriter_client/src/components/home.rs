@@ -54,7 +54,7 @@ impl Component for Home {
                 self.link.send_future(
                     async move {
                         let client = reqwest::Client::new();
-                        let resp =client.post("https://handwrite.herokuapp.com/create")
+                        let resp =client.post(format!("{}/create",option_env!("SERVER_URL").unwrap_or("https://handwrite.herokuapp.com")))
                             .json(
                                 &HandParameters{
                                     text: text,
