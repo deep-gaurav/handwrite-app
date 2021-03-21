@@ -60,8 +60,8 @@ async fn main() {
         .allow_methods(vec!["POST", "GET"]);
 
     let solver = async {
-        let hgen = tokio::task::spawn(async {
-            let hgen = handwriter::HandWritingGen::new(false,true);
+        let hgen = tokio::task::spawn_blocking(|| {
+            let hgen = handwriter::HandWritingGen::new(true,true);
             hgen
         })
         .await;

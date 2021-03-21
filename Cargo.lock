@@ -298,6 +298,7 @@ dependencies = [
  "log",
  "md5",
  "pretty_env_logger",
+ "pyo3",
  "serde",
  "serde_json",
  "tokio",
