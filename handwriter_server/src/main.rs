@@ -1,6 +1,6 @@
 use std::{error, process::Stdio};
 
-use tokio::process::Command;
+use tokio::{process::Command, task::spawn_blocking};
 
 use warp::{http::Response, reject::Reject, Filter};
 
@@ -61,7 +61,7 @@ async fn main() {
 
     let solver = async {
         let hgen = tokio::task::spawn_blocking(|| {
-            let hgen = handwriter::HandWritingGen::new(true,true);
+            let hgen = handwriter::HandWritingGen::new(true, true);
             hgen
         })
         .await;
@@ -79,54 +79,70 @@ async fn main() {
             if let Some(task) = task {
                 let taskc = task.clone();
                 let filename = format!("/{}.svg", task.id);
-                match &hgen {
-                    Ok(hgen) => {
-                        match hgen {
-                            Ok(hgen) => {
-                                let svg = hgen.gen_svg(
-                                    &task.text,
-                                    task.style.unwrap_or(0),
-                                    task.bias.unwrap_or(0.75),
-                                    &task.color.unwrap_or("blue".to_string()),
-                                    task.width.unwrap_or(1) as f32,
-                                );
-                                match svg {
+                match hgen {
+                    Ok(ref hgen) => match hgen {
+                        Ok(hgen) => {
+                            let hgenf = hgen.clone();
+                            let taskc = task.clone();
+                            let svg = tokio::task::spawn_blocking(move|| {
+                                hgenf.gen_svg(
+                                    &taskc.text,
+                                    taskc.style.unwrap_or(0),
+                                    taskc.bias.unwrap_or(0.75),
+                                    &taskc.color.unwrap_or("blue".to_string()),
+                                    taskc.width.unwrap_or(1) as f32,
+                                )
+                            })
+                            .await;
+                            match svg {
+                                Ok(svg) => match svg {
                                     Ok(svg) => {
-                                        complete_task( context.clone(), &taskc.id, TaskStatus::Completed(
-                                    TaskCompleteTypes::Success(
-                                        SuccessResult{
-                                            url:format!("https://handwrite.herokuapp.com/image/{}.svg",task.id),
-                                            svg:svg,
-                                        }
-                                    ),
-                                )).await;
+                                        complete_task( context.clone(), &task.id, TaskStatus::Completed(
+                                        TaskCompleteTypes::Success(
+                                            SuccessResult{
+                                                url:format!("https://handwrite.herokuapp.com/image/{}.svg",task.id.clone()),
+                                                svg:svg,
+                                            }
+                                        ),
+                                    )).await;
                                     }
                                     Err(err) => {
                                         complete_task(
                                             context.clone(),
-                                            &taskc.id,
+                                            &task.id,
                                             TaskStatus::Completed(TaskCompleteTypes::Failed(
                                                 format!("child spawn failed {:#?}", err),
                                             )),
                                         )
                                         .await;
                                     }
+                                },
+                                Err(err) => {
+                                    complete_task(
+                                        context.clone(),
+                                        &task.id,
+                                        TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
+                                            "child spawn failed {:#?}",
+                                            err
+                                        ))),
+                                    )
+                                    .await;
                                 }
                             }
-                            Err(err) => {
-                                complete_task(
-                                    context.clone(),
-                                    &taskc.id,
-                                    TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
-                                        "child spawn failed {:#?}",
-                                        err
-                                    ))),
-                                )
-                                .await;
-                            }
                         }
-                    }
-                    Err(err) => {
+                        Err(err) => {
+                            complete_task(
+                                context.clone(),
+                                &taskc.id,
+                                TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
+                                    "child spawn failed {:#?}",
+                                    err
+                                ))),
+                            )
+                            .await;
+                        }
+                    },
+                    Err(ref err) => {
                         complete_task(
                             context.clone(),
                             &taskc.id,
