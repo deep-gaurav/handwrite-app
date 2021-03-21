@@ -13,7 +13,3 @@ export_env_dir() {
 export_env_dir $ENV_DIR
 echo $HANDLIBPATH
 git clone https://89b81c9198c7975942f82cf05ecc040ded55051f@github.com/deep-gaurav/handwriter.git
-curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
-exec $SHELL
-env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.7.7
-export LD_LIBRARY_PATH=~/.pyenv/versions/3.7.7/lib/
