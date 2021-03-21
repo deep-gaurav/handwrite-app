@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:1.6.0
+FROM tensorflow/tensorflow
 
 ARG DEBIAN_FRONTEND=noninteractive
 
