@@ -3,7 +3,7 @@ FROM tensorflow/tensorflow
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt update
-RUN apt install -y python-tk git
+RUN apt install -y python-tk git pkg-config libssl-dev
 RUN apt install -y curl build-essential aria2 unrar unzip tree zip wget wget libcairo2-dev pkg-config python-dev python3-dev
 
 
