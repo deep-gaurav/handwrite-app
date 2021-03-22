@@ -1,5 +1,5 @@
-pub mod worker;
 pub mod server;
+pub mod worker;
 
 use std::{error, process::Stdio};
 
@@ -43,9 +43,13 @@ async fn main() {
         .and(warp::body::json::<HandParameters>())
         .and(with_context.clone())
         .and_then(create);
+    let worker_status = warp::path!("worker")
+        .and(with_context.clone())
+        .and_then(worker_status);
     let status_task = warp::path!("status" / String)
         .and(with_context)
         .and_then(status);
+
     let fs_s = warp::path("files").and(warp::fs::dir("/"));
     let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
 
@@ -63,16 +67,20 @@ async fn main() {
         .allow_methods(vec!["POST", "GET"]);
 
     let solver = tokio::spawn(async move {
-        if let Some(workers)= std::env::var("WORKERS").ok(){
+        if let Some(workers) = std::env::var("WORKERS").ok() {
             let mut servers = workers.split(",").collect::<Vec<_>>();
-            let servers = servers.into_iter().map(|s|s.to_string()).collect();
+            let servers = servers.into_iter().map(|s| s.to_string()).collect();
             server::server(context, servers).await
-
-        }else{
+        } else {
             worker::worker(context).await;
         }
     });
-    let route = (hello.or(create_task).or(status_task).or(fs_s)).with(cors);
+    let route = (hello
+        .or(create_task)
+        .or(status_task)
+        .or(fs_s)
+        .or(worker_status))
+    .with(cors);
     let warpav = warp::serve(route).run((
         [0, 0, 0, 0],
         std::env::var("PORT")
