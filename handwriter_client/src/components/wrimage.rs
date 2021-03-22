@@ -114,9 +114,7 @@ impl Component for WrImage {
                         </div>
                         <div class="message-body">
                             <progress class="progress is-primary" value=progress max=total>
-                                {
-                                    format!("{}%",(progress/total)*100)
-                                }
+                                
                             </progress>
                         </div>
                     </article>
