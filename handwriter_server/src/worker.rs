@@ -17,7 +17,7 @@ use crate::Context;
 pub async fn worker(context: Context) {
     {
         let hgen = tokio::task::spawn_blocking(|| {
-            let hgen = handwriter::HandWritingGen::new(true, true);
+            let hgen = handwriter::pystruct::HandWritingGen::new(true, true);
             hgen
         })
         .await;

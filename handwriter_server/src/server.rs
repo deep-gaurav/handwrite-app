@@ -1,6 +1,7 @@
 use std::{error, fmt::format, process::Stdio};
 
-use handwriter::{HandWritingGen, Stroke};
+use handwriter::pystruct::HandWritingGen;
+use handwriter::strokes::Stroke;
 use tokio::{io::split, process::Command, task::spawn_blocking};
 
 use warp::{http::Response, reject::Reject, Filter};
@@ -83,7 +84,8 @@ async fn complete_line(
     maintaskid: String,
     context: Context,
 ) -> Result<(String, Task), anyhow::Error> {
-    loop {
+    log::info!("Completing line {}", task.text);
+    let worker = loop {
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
         let worker = {
             let mut workers = workers.write().await;
@@ -104,38 +106,58 @@ async fn complete_line(
             }
         };
         if let Some(worker) = worker {
-            let client = reqwest::Client::new();
+            break worker;
+        }
+    };
+    log::info!("Using worker {} for line {}", worker, task.text);
+    let client = reqwest::Client::new();
+    let res = client
+        .post(format!("http://{}/create", worker))
+        .json(&task)
+        .send()
+        .await?;
+    if res.status().is_success() {
+        let subtask = res.json::<Task>().await?;
+        let response = loop {
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
             let res = client
-                .post(format!("http://{}/create", worker))
-                .json(&task)
+                .get(format!("http://{}/status/{}", worker, subtask.id))
                 .send()
                 .await?;
-            if res.status().is_success() {
-                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-                let subtask = res.json::<Task>().await?;
-                let res = client
-                    .get(format!("http://{}/status/{}", worker,subtask.id))
-                    .send()
-                    .await?;
-                let response = res.json::<Task>().await?;
-                if response.status.is_completed() {
-                    let mut c = context.write().await;
-                    let maintask = c.iter_mut().find(|f| f.id == maintaskid);
-                    if let Some(task) = maintask {
-                        if let TaskStatus::Working(done, total) = &mut task.status {
-                            *done += 1;
-                        }
-                    }
-                    return Ok((task.text.clone(), response));
-                }
-            } else {
-                log::error!("task {:#?} to worker {} failed {:#?}", task, worker, res);
-                return Err(anyhow::anyhow!(format!(
-                    "task {:#?} to worker {} failed {:#?}",
-                    task, worker, res
-                )));
+            let response = res.json::<Task>().await?;
+            if response.status.is_completed() {
+                break response;
             }
+        };
+        if response.status.is_completed() {
+            let mut c = context.write().await;
+            let maintask = c.iter_mut().find(|f| f.id == maintaskid);
+            log::info!("Worker {} completed {}", worker, response.text);
+            if let Some(task) = maintask {
+                if let TaskStatus::Working(done, total) = &mut task.status {
+                    *done += 1;
+                }
+            }
+            return Ok((task.text.clone(), response));
+        } else {
+            log::error!(
+                "task {:#?} to worker {} failed {:#?}",
+                task,
+                worker,
+                response
+            );
+            return Err(anyhow::anyhow!(format!(
+                "task {:#?} to worker {} failed {:#?}",
+                task, worker, response
+            )));
         }
+    } else {
+        log::error!("task {:#?} to worker {} failed {:#?}", task, worker, res);
+        return Err(anyhow::anyhow!(format!(
+            "task {:#?} to worker {} failed {:#?}",
+            task, worker, res
+        )));
     }
 }
 
@@ -169,43 +191,57 @@ pub async fn server(context: Context, servers: Vec<String>) {
         futures::future::join_all(refreshers).await;
     });
 
-    let manager = tokio::spawn(async move {
-        loop {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-            let task: Option<Task> = {
-                let mut c = context.write().await;
-                let task_to_do = c.iter_mut().find(|t| t.status.is_waiting());
-                if let Some(task) = task_to_do {
-                    let lines = accomodate_list_to_character_limit(&task.text);
-                    task.status = TaskStatus::Working(0, lines.len() as u32);
+    let manager =
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                let task: Option<Task> = {
+                    let mut c = context.write().await;
+                    let task_to_do = c.iter_mut().find(|t| t.status.is_waiting());
+                    if let Some(task) = task_to_do {
+                        let lines = accomodate_list_to_character_limit(&task.text);
+                        task.status = TaskStatus::Working(0, lines.len() as u32);
 
-                    Some(task.clone())
-                } else {
-                    None
-                }
-            };
-            if let Some(task) = task {
-                let taskc = task.clone();
-                let lines = accomodate_list_to_character_limit(&taskc.text);
-                let futs = lines.into_iter().map(|line| {
-                    let param = HandParameters {
-                        text: line,
-                        style: task.style,
-                        bias: task.bias,
-                        color: task.color.clone(),
-                        width: task.width,
-                    };
-                    complete_line(workers.clone(), param, task.id.clone(), context.clone())
-                });
-                let f = futures::future::try_join_all(futs).await;
-                match f {
-                    Ok(tasks) => {
-                        let mut strokesall = vec![];
-                        let mut failed = false;
-                        for td in tasks {
-                            if let Some(succ) = td.1.status.as_completed() {
-                                if let Some(succtype) = succ.as_success() {
-                                    strokesall.push(succtype.stroke.clone())
+                        Some(task.clone())
+                    } else {
+                        None
+                    }
+                };
+                if let Some(task) = task {
+                    let taskc = task.clone();
+                    let lines = accomodate_list_to_character_limit(&taskc.text);
+                    let futs = lines.into_iter().map(|line| {
+                        let param = HandParameters {
+                            text: line,
+                            style: task.style,
+                            bias: task.bias,
+                            color: task.color.clone(),
+                            width: task.width,
+                        };
+                        complete_line(workers.clone(), param, task.id.clone(), context.clone())
+                    });
+                    let f = futures::future::try_join_all(futs).await;
+                    match f {
+                        Ok(tasks) => {
+                            let mut strokesall = vec![];
+                            let mut failed = false;
+                            for td in tasks {
+                                if let Some(succ) = td.1.status.as_completed() {
+                                    if let Some(succtype) = succ.as_success() {
+                                        strokesall.push(succtype.stroke.clone())
+                                    } else {
+                                        log::error!("task failed by worker {:#?} ", td.1);
+                                        failed = true;
+                                        complete_task(
+                                            context.clone(),
+                                            &taskc.id,
+                                            TaskStatus::Completed(TaskCompleteTypes::Failed(
+                                                format!("task failed by worker {:#?}", td.1),
+                                            )),
+                                        )
+                                        .await;
+                                        break;
+                                    }
                                 } else {
                                     log::error!("task failed by worker {:#?} ", td.1);
                                     failed = true;
@@ -220,80 +256,65 @@ pub async fn server(context: Context, servers: Vec<String>) {
                                     .await;
                                     break;
                                 }
-                            } else {
-                                log::error!("task failed by worker {:#?} ", td.1);
-                                failed = true;
-                                complete_task(
-                                    context.clone(),
-                                    &taskc.id,
-                                    TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
-                                        "task failed by worker {:#?}",
-                                        td.1
-                                    ))),
-                                )
-                                .await;
-                                break;
                             }
-                        }
-                        if !failed {
-                            let svg = HandWritingGen::write_svg_fromstroke(
-                                strokesall.clone(),
-                                1000.,
-                                60.0,
-                            );
+                            if !failed {
+                                let svg = HandWritingGen::write_svg_fromstroke(
+                                    strokesall.clone(),
+                                    1000.,
+                                    60.0,
+                                );
 
-                            match svg {
-                                Ok(svg) => {
-                                    let mut strokepaths = vec![];
-                                    for mut stroke in strokesall {
-                                        strokepaths.append(&mut stroke.strokes)
-                                    }
-                                    complete_task(
-                                        context.clone(),
-                                        &task.id,
-                                        TaskStatus::Completed(TaskCompleteTypes::Success(
-                                            SuccessResult {
-                                                url: format!(
+                                match svg {
+                                    Ok(svg) => {
+                                        let mut strokepaths = vec![];
+                                        for mut stroke in strokesall {
+                                            strokepaths.append(&mut stroke.strokes)
+                                        }
+                                        complete_task(
+                                            context.clone(),
+                                            &task.id,
+                                            TaskStatus::Completed(TaskCompleteTypes::Success(
+                                                SuccessResult {
+                                                    url: format!(
                                                     "https://handwrite.herokuapp.com/file/{}.svg",
                                                     task.id.clone()
                                                 ),
-                                                svg: svg,
-                                                stroke: Stroke {
-                                                    strokes: strokepaths,
+                                                    svg: svg,
+                                                    stroke: Stroke {
+                                                        strokes: strokepaths,
+                                                    },
                                                 },
-                                            },
-                                        )),
-                                    )
-                                    .await;
-                                }
-                                Err(err) => {
-                                    complete_task(
-                                        context.clone(),
-                                        &taskc.id,
-                                        TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
-                                            "task failed {:#?}",
-                                            err
-                                        ))),
-                                    )
-                                    .await;
+                                            )),
+                                        )
+                                        .await;
+                                    }
+                                    Err(err) => {
+                                        complete_task(
+                                            context.clone(),
+                                            &taskc.id,
+                                            TaskStatus::Completed(TaskCompleteTypes::Failed(
+                                                format!("task failed {:#?}", err),
+                                            )),
+                                        )
+                                        .await;
+                                    }
                                 }
                             }
                         }
-                    }
-                    Err(err) => {
-                        complete_task(
-                            context.clone(),
-                            &taskc.id,
-                            TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
-                                "task failed {:#?}",
-                                err
-                            ))),
-                        )
-                        .await;
+                        Err(err) => {
+                            complete_task(
+                                context.clone(),
+                                &taskc.id,
+                                TaskStatus::Completed(TaskCompleteTypes::Failed(format!(
+                                    "task failed {:#?}",
+                                    err
+                                ))),
+                            )
+                            .await;
+                        }
                     }
                 }
             }
-        }
-    });
+        });
     futures::join!(refresher, manager);
 }

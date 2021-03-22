@@ -106,6 +106,22 @@ impl Component for WrImage {
                     </article>
                 }
             }
+            handwriter_shared::TaskStatus::Working(progress,total)=>{
+                html!{
+                    <article class="message is-info">
+                        <div class="message-header">
+                            <p>{"Working"}</p>
+                        </div>
+                        <div class="message-body">
+                            <progress class="progress is-primary" value=progress max=total>
+                                {
+                                    format!("{}%",(progress/total)*100)
+                                }
+                            </progress>
+                        </div>
+                    </article>
+                }
+            }
             handwriter_shared::TaskStatus::Completed(status) => {
                 match status {
                     handwriter_shared::TaskCompleteTypes::Success(result) => {
