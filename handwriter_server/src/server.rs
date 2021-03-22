@@ -149,7 +149,7 @@ pub async fn server(context: Context, servers: Vec<String>) {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                     let serverid = server.clone();
-                    let req = reqwest::get(format!("{}/worker", server))
+                    let req = reqwest::get(format!("https://{}/worker", server))
                         .and_then(|f| f.json::<WorkerStatus>())
                         .await;
                     match req {
