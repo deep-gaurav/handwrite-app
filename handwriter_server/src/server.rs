@@ -50,21 +50,21 @@ fn accomodate_list_to_character_limit(content: &str) -> Vec<String> {
         if line.len() > max_length {
             fn split_line(line: &str, max_size: usize) -> Vec<String> {
                 if line.len() < max_size {
-                    vec![line.to_string()]
+                    vec![line.trim_end().to_string()]
                 } else {
                     let ptosplit = line[..max_size].rfind(' ');
                     if let Some(ptosplit) = ptosplit {
                         if ptosplit < line.len() - 1 {
-                            let mut splits = vec![line[..ptosplit + 1].to_string()];
+                            let mut splits = vec![line[..ptosplit + 1].trim_end().to_string()];
                             splits.append(&mut split_line(&line[ptosplit + 1..], max_size));
                             splits
                         } else {
-                            let mut splits = vec![line[..max_size].to_string()];
+                            let mut splits = vec![line[..max_size].trim_end().to_string()];
                             splits.append(&mut split_line(&line[max_size..], max_size));
                             splits
                         }
                     } else {
-                        let mut splits = vec![line[..max_size].to_string()];
+                        let mut splits = vec![line[..max_size].trim_end().to_string()];
                         splits.append(&mut split_line(&line[max_size..], max_size));
                         splits
                     }
