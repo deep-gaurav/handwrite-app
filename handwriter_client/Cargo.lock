@@ -331,6 +331,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "handwriter"
+version = "0.1.0"
+dependencies = [
+ "cfg-if 0.1.10",
+ "log",
+ "serde",
+]
+
+[[package]]
 name = "handwriter_client"
 version = "0.1.0"
 dependencies = [
@@ -349,6 +358,7 @@ dependencies = [
 name = "handwriter_shared"
 version = "0.1.0"
 dependencies = [
+ "handwriter",
  "serde",
 ]
 
