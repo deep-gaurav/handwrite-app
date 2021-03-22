@@ -112,8 +112,9 @@ async fn complete_line(
                 .await?;
             if res.status().is_success() {
                 tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                let subtask = res.json::<Task>().await?;
                 let res = client
-                    .get(format!("http://{}/status", worker))
+                    .get(format!("http://{}/status/{}", worker,subtask.id))
                     .send()
                     .await?;
                 let response = res.json::<Task>().await?;

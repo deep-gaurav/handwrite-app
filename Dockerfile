@@ -16,4 +16,4 @@ RUN cd /src && pip install -r requirements.txt
 
 
 RUN export PATH="$PATH:$HOME/.cargo/bin" && cd /src && cargo build --release
-CMD cd /src && RUST_LOG=debug ./target/release/handwriter_server
+CMD cd /src && RUST_LOG=info ./target/release/handwriter_server
