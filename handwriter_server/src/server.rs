@@ -75,7 +75,7 @@ fn accomodate_list_to_character_limit(content: &str) -> Vec<String> {
             final_lines.push(line.to_string())
         }
     }
- final_lines=final_lines.into_iter().map(|l|l.rtrim().to_string()).collect();
+ final_lines=final_lines.into_iter().map(|l|l.trim_end().to_string()).collect();
     final_lines
 }
 
