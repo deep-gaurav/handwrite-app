@@ -15,5 +15,5 @@ RUN cd /src && git clone https://89b81c9198c7975942f82cf05ecc040ded55051f@github
 RUN cd /src/handwriter/ && git pull && cd .. && pip install -r requirements.txt
 
 
-RUN export PATH="$PATH:$HOME/.cargo/bin" && cd /src && cargo build --release
-CMD cd /src/handwriter/ && git pull && cd .. && RUST_LOG=info ./target/release/handwriter_server
+RUN export PATH="$PATH:$HOME/.cargo/bin" && cd /src/handwriter/ && git pull && cd .. && cargo build --release
+CMD cd /src && RUST_LOG=info ./target/release/handwriter_server
