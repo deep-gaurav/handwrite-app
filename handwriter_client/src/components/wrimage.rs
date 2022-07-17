@@ -125,7 +125,9 @@ impl Component for WrImage {
                 match status {
                     handwriter_shared::TaskCompleteTypes::Success(result) => {
                         use wasm_bindgen::JsValue;
-                        let js_val = JsValue::from_str(&result.svg);
+                        let arr = js_sys::Array::new(); 
+                        arr.push( &JsValue::from(&result.svg));
+                        let js_val = JsValue::from(arr);
                         let mut propertybag = BlobPropertyBag::new();
                         propertybag.type_("image/svg+xml;charset=utf-8");
                         let blob = Blob::new_with_str_sequence_and_options(
