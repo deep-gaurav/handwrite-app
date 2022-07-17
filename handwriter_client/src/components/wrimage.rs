@@ -156,7 +156,7 @@ impl Component for WrImage {
 
                             <article class="message is-success">
                                 <div class="message-header">
-                                    <p><a href=url.unwrap_or_default().clone()>{"Success"}</a></p>
+                                    <p><a href=url.unwrap_or_default().clone() download=true>{"Success"}</a></p>
                                 </div>
                                 <div class="message-body">
                                     <RawHtml inner_html=result.svg.clone() />
