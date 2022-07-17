@@ -1,4 +1,5 @@
 use handwriter_shared::Task;
+use web_sys::{Url, Blob, BlobPropertyBag};
 use yew::{prelude::*, services::{IntervalService, interval::IntervalTask}};
 use yewtil::future::LinkFuture;
 
@@ -123,11 +124,37 @@ impl Component for WrImage {
             handwriter_shared::TaskStatus::Completed(status) => {
                 match status {
                     handwriter_shared::TaskCompleteTypes::Success(result) => {
+                        use wasm_bindgen::JsValue;
+                        let js_val = JsValue::from_str(&result.svg);
+                        let mut propertybag = BlobPropertyBag::new();
+                        propertybag.type_("image/svg+xml;charset=utf-8");
+                        let blob = Blob::new_with_str_sequence_and_options(
+                            &js_val,
+                            &propertybag
+                        ).map_err(|err| 
+                            html!{
+
+                                <article class="message is-danger">
+                                    <div class="message-header">
+                                        <p>{"Failed"}</p>
+                                    </div>
+                                    <div class="message-body">
+                                        {format!("{:#?}",err)}
+                                    </div>
+                                </article>
+                            }
+                        );
+                        let blob = match blob {
+                            Ok(blob) => blob,
+                            Err(err) => return err,
+                        };
+                        let url = Url::create_object_url_with_blob(&blob);
+
                         html!{
 
                             <article class="message is-success">
                                 <div class="message-header">
-                                    <p><a href=result.url.clone()>{"Success"}</a></p>
+                                    <p><a href=url.unwrap_or_default().clone()>{"Success"}</a></p>
                                 </div>
                                 <div class="message-body">
                                     <RawHtml inner_html=result.svg.clone() />

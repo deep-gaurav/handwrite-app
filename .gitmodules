@@ -1,0 +1,3 @@
+[submodule "handwriter"] 
+  path = handwriter 
+  url = git://github.com/deep-gaurav/handwriter.git

@@ -1,5 +1,5 @@
 use serde::{Serialize,Deserialize};
-use handwriter::strokes::Stroke;
+// use handwriter::strokes::Stroke;
 
 #[derive(Clone, Debug, Serialize, Deserialize,PartialEq)]
 pub struct Task {
@@ -83,7 +83,7 @@ impl TaskCompleteTypes {
 pub struct SuccessResult {
     pub url: String,
     pub svg: String,
-    pub stroke:Stroke,
+    // pub stroke:Stroke,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

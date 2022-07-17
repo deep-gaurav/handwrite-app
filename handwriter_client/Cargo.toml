@@ -15,10 +15,14 @@ wasm-logger = "0.2.0"
 serde = { version = "1.0", features = ["derive"] }
 console_error_panic_hook = "0.1.6"
 reqwest = { version = "0.11", features = ["json"] }
+wasm-bindgen = "0.2.81"
 
 [dependencies.web-sys]
 version = "0.3"
 features = [
     "HtmlInputElement",
     "HtmlTextAreaElement",
+    "BlobPropertyBag",
+    "Blob",
+    "Url",
 ]
